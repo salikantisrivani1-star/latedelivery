@@ -2,40 +2,45 @@ import streamlit as st
 import pickle
 import numpy as np
 
+# Load model
+model = pickle.load(open("model.pkl", "rb"))
+encoder = pickle.load(open("encoder.pkl", "rb"))
+
 st.title("Late Delivery Risk Prediction")
+st.write("Predict if an order will be delivered late")
 
-try:
-    model = pickle.load(open("model.pkl", "rb"))
-    encoder = pickle.load(open("encoder.pkl", "rb"))
-except:
-    st.error("Model files not found. Please upload model.pkl and encoder.pkl.")
-    st.stop()
-
+# Inputs
 shipping_mode = st.selectbox(
     "Shipping Mode",
-    ["Standard Class","Second Class","First Class","Same Day"]
+    encoder.classes_
 )
 
-actual_days = st.number_input("Actual Shipping Days",1,10)
-scheduled_days = st.number_input("Scheduled Shipping Days",1,10)
-order_quantity = st.number_input("Order Quantity",1,20)
-product_price = st.number_input("Product Price",1.0,1000.0)
+real_days = st.number_input("Actual Shipping Days", min_value=0)
 
-if st.button("Predict"):
+scheduled_days = st.number_input("Scheduled Shipping Days", min_value=0)
 
-    mode = encoder.transform([shipping_mode])[0]
+quantity = st.number_input("Order Item Quantity", min_value=1)
 
-    input_data = np.array([[mode,actual_days,scheduled_days,order_quantity,product_price]])
+price = st.number_input("Product Price", min_value=1.0)
 
-    prediction = model.predict(input_data)
+# Encode shipping mode
+shipping_mode_encoded = encoder.transform([shipping_mode])[0]
 
-    if prediction[0] == 1:
-        st.error("High Risk of Late Delivery")
-    else:
-        st.success("Delivery Likely On Time")
+# Prediction
+if st.button("Predict Delivery Status"):
 
+    features = np.array([[
+        real_days,
+        scheduled_days,
+        shipping_mode_encoded,
+        quantity,
+        price
+    ]])
+
+    prediction = model.predict(features)
 
     if prediction[0] == 1:
         st.error("⚠ High Risk of Late Delivery")
     else:
         st.success("✅ Delivery Expected On Time")
+
